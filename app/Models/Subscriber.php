@@ -10,17 +10,26 @@ class Subscriber extends Model
     use HasFactory;
 
     protected $fillable = [
-        'game_id',
-        'duration',
+        'main_category_id',
+        'sub_category_id',
         'country',
         'name',
         'email',
         'phone',
+        'price',
         'status',
+        'payment_status',
+        'payment_date',
+        'activation_code',
     ];
 
-    public function game()
+    public function mainCategory()
     {
-        return $this->belongsTo(Game::class);
+        return $this->belongsTo(MainCategory::class);
+    }
+
+    public function subCategory()
+    {
+        return $this->belongsTo(SubCategory::class);
     }
 }

@@ -30,33 +30,35 @@ use App\Http\Controllers\PaymentController;
 
 Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::get('plans', function ($lang) {
-        App::setLocale($lang); // تعيين اللغة بناءً على المسار
-        $data = getViewData($lang); // افتراض أن getViewData تعيد بيانات مشتركة للعرض
-        $games = Game::with(['subCategories' => function ($query) {
-            $query->select('sub_categories.id', 'sub_categories.name_ar', 'sub_categories.name_en', 'sub_categories.duration', 'sub_categories.price');
-        }])->get(); // جلب الألعاب مع الخطط مع السعر والمدة
-        return view('plans', array_merge($data, compact('games', 'lang')));
-    });
+        App::setLocale($lang);
+        $data = getViewData($lang);
+        $mainCategories = \App\Models\MainCategory::with(['subCategories' => function ($query) {
+            $query->select('sub_categories.id', 'sub_categories.main_category_id', 'sub_categories.name_ar', 'sub_categories.name_en', 'sub_categories.duration', 'sub_categories.price', 'sub_categories.status')
+                ->where('status', 1);
+        }])
+            ->where('status', 1)
+            ->get();
+        return view('plans', array_merge($data, compact('mainCategories', 'lang')));
+    })->name('plans');
+
+    Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
+    Route::post('/subscriber/store', [SubscriberController::class, 'store'])->name('subscriber.store');
+    Route::get('/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
+
+    Route::get('/payment/paypal/{subscriber_id}/{type?}', [PaymentController::class, 'paypal'])->name('payment.paypal');
+    Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'paypal'])->name('payment.process-paypal');
+    Route::post('/payment/process-card/{subscriber_id}', [PaymentController::class, 'processCardPayment'])->name('payment.process-card');
+    Route::get('/payment/success/{subscriber_id}', [PaymentController::class, 'success'])->name('payment.success');
+    Route::get('/payment/cancel/{subscriber_id}', [PaymentController::class, 'cancel'])->name('payment.cancel');
+    Route::get('/payment/transfer/{subscriber_id}', [PaymentController::class, 'showTransferForm'])->name('payment.transfer');
+    Route::post('/payment/transfer/{subscriber_id}', [PaymentController::class, 'storeTransfer'])->name('payment.transfer.store');
 });
 
-
-Route::get('/payment/paypal/{lang}/{subscriber_id}/{type?}', [PaymentController::class, 'paypal'])->name('payment.paypal');
-Route::post('/payment/process-card/{lang}/{subscriber_id}', [PaymentController::class, 'processCard'])->name('payment.process-card');
-Route::get('/payment/success/{lang}/{subscriber_id}', [PaymentController::class, 'success'])->name('payment.success');
-
-
-// Existing payment routes
-Route::post('/{lang}/payment/process-card/{subscriber_id}', [PaymentController::class, 'processCardPayment'])->name('payment.process-card');
-Route::get('/payment/success/{subscriber_id}', [PaymentController::class, 'success'])->name('payment.success');
-Route::get('/payment/cancel/{subscriber_id}', [PaymentController::class, 'cancel'])->name('payment.cancel');
-Route::get('/payment/transfer/{subscriber_id}', [PaymentController::class, 'showTransferForm'])->name('payment.transfer');
-Route::post('/payment/transfer/{subscriber_id}', [PaymentController::class, 'storeTransfer'])->name('payment.transfer.store');
-
 // Add the missing PayPal route
-Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'paypal'])->name('payment.paypal');Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
+Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'paypal'])->name('payment.paypal');
+Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
 Route::post('/subscriber/store', [SubscriberController::class, 'store'])->name('subscriber.store');
 Route::get('/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
-
 
 Route::get('/plans', function () {
     $lang = session('language', 'ar');
@@ -87,7 +89,6 @@ Route::get('/', function () {
     $lang = session('language', 'ar'); // Default to 'ar' if no session
     return redirect("/{$lang}");
 });
-
 
 Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::get('/dashboard', function ($lang) {

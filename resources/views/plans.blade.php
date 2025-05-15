@@ -46,78 +46,55 @@
                 {{ $lang == 'ar' ? 'اختار باقتك' : 'Choose your plan' }}
             </h1>
 
-            {{-- Start Container Cards --}}
+            <!-- Keep the header and other parts as they are -->
             <div class="container-cards">
-                @forelse ($games as $game)
+                @forelse ($mainCategories as $mainCategory)
                     <div class="card">
                         <div>
-                            @if ($game->mainCategory->image)
-                                <img src="{{ asset('storage/' . $game->mainCategory->image) }}" alt="unknown">
+                            @if ($mainCategory->image)
+                                <img src="{{ asset('storage/' . $mainCategory->image) }}"
+                                    alt="{{ $mainCategory->name_ar }}"
+                                    style="width: 100px; height: 100px; object-fit: cover; border-radius: 0.25rem;">
                             @else
                                 <div
-                                    style="width: 50px; height: 50px; background-color: #4b5563; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center;">
-                                    <span style="color: #9ca3af; font-size: 0.75rem;">لا توجد صورة</span>
+                                    style="width: 100px; height: 100px; background-color: #4b5563; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">
+                                        {{ $lang == 'ar' ? 'لا توجد صورة' : 'No image' }}
+                                    </span>
                                 </div>
-
-                                <span style="color: #9ca3af;">{{ $lang == 'ar' ? 'لا توجد صورة' : 'No image' }}</span>
                             @endif
-                            <span class="title">{{ $game->name }}</span>
+                            <span class="title">
+                                {{ $lang == 'ar' ? $mainCategory->name_ar : $mainCategory->name_en }}
+                            </span>
                         </div>
+
                         <div class="price" style="flex-direction: row !important;">
-                            <span class="price-value" id="price-{{ $game->id }}">
-                                {{ $game->subCategories->first()->price ?? '0.00' }}
+                            <span class="price-value" id="price-{{ $mainCategory->id }}">
+                                {{ $mainCategory->subCategories->first()->price ?? '0.00' }}
                             </span>
                             <span class="price-title">{{ $lang == 'ar' ? 'السعر' : 'Price' }}</span>
                         </div>
+
                         <div class="price" style="border-top: 1px solid #9ca3af;">
                             <div style="margin-left: auto;">
                                 <span class="price-title">{{ $lang == 'ar' ? 'اختر خطتك' : 'Duration' }}</span>
                             </div>
 
-                            <style>
-                                .selector-container {
-                                    background-color: black;
-                                    border-radius: 15px;
-                                    padding: 5px;
-                                    display: inline-block;
-                                }
-
-                                .duration-option {
-                                    display: inline-block;
-                                    padding: 5px 10px;
-                                    margin-right: 5px;
-                                    color: white;
-                                    cursor: pointer;
-                                    user-select: none;
-                                    transition: background-color 0.3s;
-                                }
-
-                                .duration-option:last-child {
-                                    margin-right: 0;
-                                }
-
-                                .duration-option input[type="radio"] {
-                                    display: none;
-                                }
-
-                                .duration-option.selected {
-                                    background-color: white;
-                                    color: black;
-                                    border-radius: 15px;
-                                }
-                            </style>
-
                             <div class="selector-container">
                                 @php
-                                    $durations = $game->subCategories->pluck('duration')->unique()->sort();
-                                    $defaultDuration = $durations->first() ?? 6;
-                                    $subCategoryPrices = $game->subCategories->pluck('price', 'duration')->toArray();
+                                    $durations = $mainCategory->subCategories->pluck('duration')->unique()->sort();
+                                    $defaultSubCategory = $mainCategory->subCategories->first();
+                                    $defaultDuration = $defaultSubCategory ? $defaultSubCategory->duration : 30;
+                                    $subCategoryPrices = $mainCategory->subCategories
+                                        ->pluck('price', 'duration')
+                                        ->toArray();
+                                    $subCategoryIds = $mainCategory->subCategories->pluck('id', 'duration')->toArray();
                                 @endphp
                                 @foreach ($durations as $duration)
                                     @php
                                         $price = $subCategoryPrices[$duration] ?? 0;
+                                        $subCategoryId = $subCategoryIds[$duration] ?? null;
                                         $months = floor($duration / 30);
-                                        $remainingDays = $duration % 30;
                                         $monthText =
                                             $lang == 'ar'
                                                 ? ($months == 1 || $months >= 11
@@ -128,9 +105,10 @@
                                                     : 'months');
                                         $durationText = $lang == 'ar' ? "$months $monthText" : "$months $monthText";
                                     @endphp
-                                    <label class="duration-option" data-game-id="{{ $game->id }}"
+                                    <label class="duration-option" data-main-category-id="{{ $mainCategory->id }}"
+                                        data-sub-category-id="{{ $subCategoryId }}"
                                         data-duration="{{ $duration }}" data-price="{{ $price }}">
-                                        <input type="radio" name="duration-{{ $game->id }}"
+                                        <input type="radio" name="duration-{{ $mainCategory->id }}"
                                             value="{{ $duration }}"
                                             {{ $duration == $defaultDuration ? 'checked' : '' }}>
                                         {{ $durationText }}
@@ -140,62 +118,134 @@
                         </div>
 
                         <div class="description-container hidden">
-                            @foreach ($lang == 'ar' ? $game->description_ar ?? [] : $game->description_en ?? [] as $desc)
-                                <div class="description">{{ $desc }}</div>
-                            @endforeach
+                            <!-- Keep the description logic as is -->
+                            @if ($mainCategory->name_ar == 'الاطفال')
+                                <div class="description">...</div>
+                                <!-- Other descriptions -->
+                            @elseif ($mainCategory->name_ar == 'الرياضة')
+                                <div class="description">...</div>
+                                <!-- Other descriptions -->
+                            @elseif ($mainCategory->name_ar == 'الأفلام')
+                                <div class="description">...</div>
+                                <!-- Other descriptions -->
+                            @endif
                         </div>
-                        <button class="choose-plan" data-game-id="{{ $game->id }}"
-                            data-duration="{{ $defaultDuration }}"
-                            onclick="redirectToSubscriberForm({{ $game->id }})">
-                            {{ $lang == 'ar' ? 'اختر باقتك' : 'Choose Plan' }}
-                        </button>
-                        <script>
-                            document.addEventListener('DOMContentLoaded', () => {
-                                // Existing code for toggle details and duration selection...
 
-                                // Update duration when selecting a new option
-                                const durationOptions = document.querySelectorAll('.duration-option');
-                                durationOptions.forEach(option => {
-                                    option.addEventListener('click', () => {
-                                        const gameId = option.getAttribute('data-game-id');
-                                        const duration = option.getAttribute('data-duration');
-                                        const price = parseFloat(option.getAttribute('data-price'));
+                        @if ($mainCategory->subCategories->first())
+                            <button class="choose-plan" data-main-category-id="{{ $mainCategory->id }}"
+                                data-sub-category-id="{{ $mainCategory->subCategories->first()->id }}"
+                                data-duration="{{ $defaultDuration }}"
+                                onclick="redirectToSubscriberForm('{{ $lang }}', this.getAttribute('data-main-category-id'), this.getAttribute('data-sub-category-id'))">
+                                {{ $lang == 'ar' ? 'اختر باقتك' : 'Choose Plan' }}
+                            </button>
+                        @else
+                            <p style="color: red;">
+                                {{ $lang == 'ar' ? 'خطأ: لا توجد فئات فرعية متاحة' : 'Error: No sub-categories available' }}
+                            </p>
+                        @endif
 
-                                        // Update the button's data-duration attribute
-                                        const choosePlanButton = document.querySelector(
-                                            `.choose-plan[data-game-id="${gameId}"]`);
-                                        choosePlanButton.setAttribute('data-duration', duration);
-
-                                        // Existing price update logic
-                                        updatePrice(gameId, price);
-                                    });
-                                });
-
-                                // Function to redirect to subscriber form
-                                window.redirectToSubscriberForm = function(gameId) {
-                                    const button = document.querySelector(`.choose-plan[data-game-id="${gameId}"]`);
-                                    const duration = button.getAttribute('data-duration');
-                                    window.location.href = `/subscriber-form?game_id=${gameId}&duration=${duration}`;
-                                };
-                            });
-                        </script> <button class="toggle-details-btn">
+                        <button class="toggle-details-btn">
                             {{ $lang == 'ar' ? 'عرض تفاصيل الخطة +' : 'Show Plan Details +' }}
                         </button>
                     </div>
                 @empty
                     <p style="color: white; text-align: center;">
-                        {{ $lang == 'ar' ? 'لا توجد باقات متاحة' : 'No games available' }}
+                        {{ $lang == 'ar' ? 'لا توجد باقات متاحة' : 'No packages available' }}
                     </p>
                 @endforelse
             </div>
-            {{-- End Container Cards --}}
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Handle toggle details buttons
+                    const toggleButtons = document.querySelectorAll('.toggle-details-btn');
+                    toggleButtons.forEach(button => {
+                        button.addEventListener('click', () => {
+                            const card = button.closest('.card');
+                            const descriptionContainer = card.querySelector('.description-container');
+                            const isHidden = descriptionContainer.classList.contains('hidden');
+
+                            descriptionContainer.classList.toggle('hidden');
+                            button.innerHTML = isHidden ?
+                                button.innerHTML.replace('عرض تفاصيل الخطة +', 'إخفاء تفاصيل الخطة -')
+                                .replace('Show Plan Details +', 'Hide Plan Details -') :
+                                button.innerHTML.replace('إخفاء تفاصيل الخطة -', 'عرض تفاصيل الخطة +')
+                                .replace('Hide Plan Details -', 'Show Plan Details +');
+                        });
+                    });
+
+                    // Handle duration selection and price update
+                    const durationOptions = document.querySelectorAll('.duration-option');
+                    durationOptions.forEach(option => {
+                        const radio = option.querySelector('input[type="radio"]');
+                        const mainCategoryId = option.getAttribute('data-main-category-id');
+                        const subCategoryId = option.getAttribute('data-sub-category-id');
+                        const duration = parseInt(option.getAttribute('data-duration'));
+                        const price = parseFloat(option.getAttribute('data-price'));
+
+                        if (radio.checked) {
+                            option.classList.add('selected');
+                            updatePrice(mainCategoryId, price);
+                            updateButtonAttributes(mainCategoryId, subCategoryId, duration);
+                        }
+
+                        option.addEventListener('click', () => {
+                            const siblings = document.querySelectorAll(
+                                `.duration-option[data-main-category-id="${mainCategoryId}"]`);
+                            siblings.forEach(sib => sib.classList.remove('selected'));
+
+                            option.classList.add('selected');
+                            radio.checked = true;
+
+                            updatePrice(mainCategoryId, price);
+                            updateButtonAttributes(mainCategoryId, subCategoryId, duration);
+                        });
+                    });
+
+                    function updatePrice(gameId, price) {
+                        const priceElement = document.getElementById(`price-${gameId}`);
+                        if (priceElement) {
+                            priceElement.textContent = price.toFixed(2);
+                        }
+                    }
+
+                    function updateButtonAttributes(gameId, duration) {
+                        const choosePlanButton = document.querySelector(
+                            `.choose-plan[data-game-id="${gameId}"]`);
+                        if (choosePlanButton) {
+                            choosePlanButton.setAttribute('data-duration', duration || '');
+                            console.log('Updated button attributes:', {
+                                gameId,
+                                duration
+                            });
+                        }
+                    }
+
+                    // Function to redirect to subscriber form
+                    // window.redirectToSubscriberForm = function(lang, gameId, duration) {
+                    //     console.log('Attempting redirect:', {
+                    //         lang,
+                    //         gameId,
+                    //         duration
+                    //     });
+                    //     if (!gameId || !duration) {
+                    //         alert(lang === 'ar' ? 'يرجى اختيار خطة صالحة.' : 'Please select a valid plan.');
+                    //         console.error('Invalid gameId or duration');
+                    //         return;
+                    //     }
+                    //     const url = `/${lang}/subscriber-form?game_id=${gameId}&duration=${duration}`;
+                    //     console.log('Redirect URL:', url);
+                    //     window.location.href = url;
+                    // };
+                });
+            </script>
         </div>
         {{-- End Body --}}
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // التعامل مع أزرار إظهار/إخفاء التفاصيل
+            // Handle toggle details buttons
             const toggleButtons = document.querySelectorAll('.toggle-details-btn');
             toggleButtons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -204,52 +254,89 @@
                     const isHidden = descriptionContainer.classList.contains('hidden');
 
                     descriptionContainer.classList.toggle('hidden');
-
-                    if (isHidden) {
-                        button.innerHTML = button.innerHTML.replace('عرض تفاصيل الخطة +',
-                                'إخفاء تفاصيل الخطة -')
-                            .replace('Show Plan Details +', 'Hide Plan Details -');
-                    } else {
-                        button.innerHTML = button.innerHTML.replace('إخفاء تفاصيل الخطة -',
-                                'عرض تفاصيل الخطة +')
-                            .replace('Hide Plan Details -', 'Show Plan Details +');
-                    }
+                    button.innerHTML = isHidden ?
+                        button.innerHTML.replace('عرض تفاصيل الخطة +', 'إخفاء تفاصيل الخطة -')
+                        .replace('Show Plan Details +', 'Hide Plan Details -') :
+                        button.innerHTML.replace('إخفاء تفاصيل الخطة -', 'عرض تفاصيل الخطة +')
+                        .replace('Hide Plan Details -', 'Show Plan Details +');
                 });
             });
 
-            // التعامل مع اختيار المدة وتحديث السعر
+            // Handle duration selection and price update
             const durationOptions = document.querySelectorAll('.duration-option');
             durationOptions.forEach(option => {
                 const radio = option.querySelector('input[type="radio"]');
-                const gameId = option.getAttribute('data-game-id');
+                const mainCategoryId = option.getAttribute('data-main-category-id');
+                const subCategoryId = option.getAttribute('data-sub-category-id');
                 const duration = parseInt(option.getAttribute('data-duration'));
                 const price = parseFloat(option.getAttribute('data-price'));
 
-                // إعداد الحالة الأولية
+                // Set initial state
                 if (radio.checked) {
                     option.classList.add('selected');
-                    updatePrice(gameId, price);
+                    updatePrice(mainCategoryId, price);
+                    updateButtonAttributes(mainCategoryId, subCategoryId, duration);
                 }
 
                 option.addEventListener('click', () => {
-                    // إلغاء تحديد جميع الخيارات في نفس المجموعة
+                    // Unselect all options in the same group
                     const siblings = document.querySelectorAll(
-                        `.duration-option[data-game-id="${gameId}"]`);
+                        `.duration-option[data-main-category-id="${mainCategoryId}"]`);
                     siblings.forEach(sib => sib.classList.remove('selected'));
 
-                    // تحديد الخيار المختار
+                    // Select the clicked option
                     option.classList.add('selected');
                     radio.checked = true;
 
-                    // تحديث السعر بناءً على المدة المختارة
-                    updatePrice(gameId, price);
+                    // Update price
+                    updatePrice(mainCategoryId, price);
+
+                    // Update the choose-plan button's data attributes
+                    updateButtonAttributes(mainCategoryId, subCategoryId, duration);
                 });
             });
 
-            function updatePrice(gameId, price) {
-                const priceElement = document.getElementById(`price-${gameId}`);
-                priceElement.textContent = price.toFixed(2);
+            function updatePrice(mainCategoryId, price) {
+                const priceElement = document.getElementById(`price-${mainCategoryId}`);
+                if (priceElement) {
+                    priceElement.textContent = price.toFixed(2);
+                }
             }
+
+            function updateButtonAttributes(mainCategoryId, subCategoryId, duration) {
+                const choosePlanButton = document.querySelector(
+                    `.choose-plan[data-main-category-id="${mainCategoryId}"]`);
+                if (choosePlanButton) {
+                    choosePlanButton.setAttribute('data-sub-category-id', subCategoryId || '');
+                    choosePlanButton.setAttribute('data-duration', duration || '');
+                    console.log('Updated button attributes:', {
+                        mainCategoryId,
+                        subCategoryId,
+                        duration
+                    });
+                }
+            }
+
+            // Function to redirect to subscriber form
+            window.redirectToSubscriberForm = function(lang, mainCategoryId, subCategoryId) {
+                const duration = document.querySelector(
+                    `.choose-plan[data-main-category-id="${mainCategoryId}"]`).getAttribute('data-duration');
+                console.log('Attempting redirect:', {
+                    lang,
+                    mainCategoryId,
+                    subCategoryId,
+                    duration
+                });
+                if (!mainCategoryId || !subCategoryId) {
+                    alert(lang === 'ar' ? 'يرجى اختيار خطة صالحة.' : 'Please select a valid plan.');
+                    console.error('Invalid mainCategoryId or subCategoryId');
+                    return;
+                }
+                const url =
+                    `/${lang}/subscriber-form?main_category_id=${mainCategoryId}&sub_category_id=${subCategoryId}&duration=${duration}`;
+                console.log('Redirect URL:', url);
+                window.location.href = url;
+            };
         });
     </script>
 </body>
