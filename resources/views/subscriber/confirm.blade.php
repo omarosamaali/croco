@@ -1,43 +1,316 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/translation.js'])
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $lang == 'ar' ? 'تأكيد الاشتراك' : 'Subscription Confirmation' }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/plans.css') }}">
+    <link rel="stylesheet" type="text/css"
+        href="https://www.paypalobjects.com/webstatic/en_US/developer/docs/css/cardfields.css" />
     <style>
-        body { font-family: 'Cairo', sans-serif; background: #f4f4f4; color: #333; }
-        .container { max-width: 600px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; }
-        h1 { text-align: center; }
-        p { margin: 10px 0; }
-        .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-        .btn:hover { background: #0056b3; }
+        form {
+            position: relative;
+            z-index: 9999999999999999999;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>{{ $lang == 'ar' ? 'تأكيد الاشتراك' : 'Subscription Confirmation' }}</h1>
-        <p>{{ $lang == 'ar' ? 'شكرًا على اشتراكك!' : 'Thank you for your subscription!' }}</p>
-        <p>
-            {{ $lang == 'ar' ? 'الباقة: ' : 'Package: ' }}
-            {{ $lang == 'ar' ? $subscriber->mainCategory->name_ar : $subscriber->mainCategory->name_en }}
-        </p>
-        <p>
-            {{ $lang == 'ar' ? 'الخطة: ' : 'Plan: ' }}
-            {{ $lang == 'ar' ? $subscriber->subCategory->name_ar : $subscriber->subCategory->name_en }}
-            ({{ $lang == 'ar' ? 'المدة: ' : 'Duration: ' }}{{ floor($subscriber->subCategory->duration / 30) }}
-            {{ $lang == 'ar' ? ($subscriber->subCategory->duration / 30 == 1 ? 'شهر' : 'أشهر') : ($subscriber->subCategory->duration / 30 == 1 ? 'month' : 'months') }})
-        </p>
-        <p>{{ $lang == 'ar' ? 'السعر: ' : 'Price: ' }}{{ $price }}</p>
-        <p>{{ $lang == 'ar' ? 'الاسم: ' : 'Name: ' }}{{ $subscriber->name }}</p>
-        <p>{{ $lang == 'ar' ? 'البريد الإلكتروني: ' : 'Email: ' }}{{ $subscriber->email }}</p>
-        <p>{{ $lang == 'ar' ? 'رقم الهاتف: ' : 'Phone: ' }}{{ $subscriber->phone }}</p>
-        <p>{{ $lang == 'ar' ? 'الدولة: ' : 'Country: ' }}{{ $subscriber->country }}</p>
-        <a href="{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
-           class="btn">{{ $lang == 'ar' ? 'الدفع باستخدام PayPal' : 'Pay with PayPal' }}</a>
-        <a href="{{ route('payment.transfer', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
-           class="btn">{{ $lang == 'ar' ? 'الدفع عن طريق التحويل البنكي' : 'Pay via Bank Transfer' }}</a>
+
+    <div>
+        <img style="position: fixed; width: 100%; height: 100%;"
+            src="https://tod-preprod.enhance.diagnal.com/resources/images/eam/production/ed90d982b63f4238a93d4dd6f4c5988d/800x450/packageselection_bg_5447.jpg"
+            alt="">
+        <div class="overlay"></div>
+        <!-- Start Header -->
+        <header
+            style="border-bottom: 5px solid var(--main-color); z-index: 9; position: relative; padding: 20px 35px; display: grid; align-items: center; grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <a href="/" style="text-align: right;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
+                    fill="none">
+                    <path d="M14.4297 5.92969L20.4997 11.9997L14.4297 18.0697" stroke="white" stroke-width="1.5"
+                        stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M3.5 12H20.33" stroke="white" stroke-width="1.5" stroke-miterlimit="10"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </a>
+
+            <div class="logo-container" style="text-align: center;">
+                <a href="/" class="logo-link">
+                    <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;"
+                        class="logo" alt="Joystick Logo">
+                </a>
+            </div>
+            {{-- <a href="/"
+                style="text-align: left; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
+                {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
+            </a> --}}
+        </header>
+        <!-- End Header -->
+
+        <div class="container" style="position: relative; z-index: 999999999999; background: #ffffff !important;">
+            <h1 style="text-align: center;">{{ $lang == 'ar' ? 'تأكيد الاشتراك' : 'Confirm Subscription' }}</h1>
+
+            <div class="container-details" style="display: flex; gap: 35px;">
+                <div style="width: 50%;" class="details">
+                    <h3 style="text-align: center; margin-top: 0px;">
+                        {{ $lang == 'ar' ? 'تفاصيل الباقة' : 'Package Details' }}</h3>
+                    <p><strong>{{ $lang == 'ar' ? 'اسم الباقة' : 'Package Name' }}</strong>
+                        {{ $lang == 'ar' ? $subscriber->mainCategory->name_ar : $subscriber->mainCategory->name_en }}
+                    </p>
+                    <p><strong>{{ $lang == 'ar' ? 'المدة' : 'Duration' }}</strong>
+                        {{ floor($subscriber->duration / 30) }} {{ $lang == 'ar' ? 'شهر' : 'months' }}</p>
+                    <div>
+                        <p><strong>{{ $lang == 'ar' ? 'السعر' : 'Price' }}</strong>
+                            <span style="display: flex; align-items: center;">
+                                {{ $price }}
+                                $ </span>
+                        </p>
+                    </div>
+                    <p><strong>{{ $lang == 'ar' ? 'الاسم' : 'Name' }}</strong> {{ $subscriber->name }}</p>
+                    <p><strong>{{ $lang == 'ar' ? 'البريد الإلكتروني' : 'Email' }}:</strong> {{ $subscriber->email }}
+                    </p>
+                    <p><strong>{{ $lang == 'ar' ? 'رقم الهاتف' : 'Phone' }}</strong> {{ $subscriber->phone }}</p>
+                    <p><strong>{{ $lang == 'ar' ? 'البلد' : 'Country' }}</strong> {{ $subscriber->country }}</p>
+                </div>
+                <div class="divider"
+                    style="width: 1px; background-color: #ccc; position: relative; z-index: 99999999999;"></div>
+                <div style="width: 50%;" class="payment-methods">
+                    <h2>{{ $lang == 'ar' ? 'اختر طريقة الدفع' : 'Choose Payment Method' }}</h2>
+                    <form id="payment-form" method="POST">
+                        @csrf
+                        <label class="payment-option">
+                            <input type="radio" name="payment_method" value="paypal" checked
+                                onchange="showPayPalOptions()">
+                            <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
+                                alt="PayPal">
+                            <span>{{ $lang == 'ar' ? 'الدفع عبر PayPal' : 'Pay with PayPal' }}</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment_method" value="fawry" onchange="showFawryOptions()">
+                            <img src="{{ asset('assets/img/fawr.webp') }}" alt="Fawry">
+                            <span>{{ $lang == 'ar' ? 'تحويل فوري' : 'Fawry Payment' }}</span>
+                        </label>
+
+                        <!-- PayPal Payment Options Container -->
+                        <!-- PayPal Payment Options Container -->
+                        <div class="payment-options-container" id="paypal-options-container">
+                            <h3 style="text-align: center;">
+                                {{ $lang == 'ar' ? 'اختر طريقة الدفع بـ PayPal' : 'Choose PayPal Payment Method' }}
+                            </h3>
+
+                            <!-- PayPal Account Button -->
+                            {{-- <button type="button" class="payment-option-button" id="paypal-account-btn"
+                                onclick="selectPaymentOption('paypal-account', '{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'account']) }}')">
+                                <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg"
+                                    alt="PayPal Account" class="payment-icon">
+                                {{ $lang == 'ar' ? 'الدفع بحساب PayPal' : 'Pay with PayPal Account' }}
+                            </button> --}}
+
+                            <!-- Credit/Debit Card Button -->
+                            {{-- <button type="button" class="payment-option-button" id="paypal-card-btn"
+                                onclick="selectPaymentOption('paypal-card', '{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'card']) }}')">
+                                <img src="https://www.paypalobjects.com/webstatic/en_US/i/buttons/cc-badges-ppmcvdam.png"
+                                    alt="Credit Card" class="payment-icon" style="width: auto; max-height: 24px;">
+                                {{ $lang == 'ar' ? 'الدفع ببطاقة الائتمان/الخصم' : 'Pay with Credit/Debit Card' }}
+                            </button> --}}
+                            <div id="paypal-button-container" class="paypal-button-container"></div>
+                            <p id="result-message"></p>
+
+
+
+                            <!-- Phone Payment Button (Mobile only) -->
+                            <button type="button" class="payment-option-button" id="paypal-phone-btn"
+                                onclick="selectPaymentOption('paypal-phone', '{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'phone']) }}')">
+                                <img src="https://cdn-icons-png.flaticon.com/512/0/191.png" alt="Phone Payment"
+                                    class="payment-icon">
+                                {{ $lang == 'ar' ? 'الدفع بالهاتف' : 'Pay with Phone' }}
+                            </button>
+                        </div>
+
+                        <!-- PayPal Account Form (hidden) -->
+                        <form id="paypal-form"
+                            action="{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'card']) }}"
+                            method="POST" style="display: none;">
+                            @csrf
+                            <input type="hidden" name="type" value="account">
+                            {{-- <button style="width: 100%;" type="submit">
+                                {{ $lang == 'ar' ? 'متابعة الدفع' : 'Continue Payment' }}
+                            </button> --}}
+                        </form>
+                        <!-- Fawry Instructions Container (Standalone Form) -->
+                        <div id="fawry-instructions" style="display: none;">
+                            <p>{{ $lang == 'ar' ? 'يرجى تحويل المبلغ إلى رقم فوري التالي:' : 'Please transfer the amount to the following Fawry number:' }}
+                            </p>
+                            <p><strong>+20 100 5677 471</strong></p>
+                            <p>{{ $lang == 'ar' ? 'بعد التحويل، يرجى رفع صورة إيصال التحويل أدناه:' : 'After transferring, please upload the transfer receipt image below:' }}
+                            </p>
+                            <form
+                                action="{{ route('payment.transfer.store', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
+                                method="POST" enctype="multipart/form-data" id="fawry-upload-form">
+                                @csrf
+                                <div class="form-group">
+                                    <label
+                                        for="transfer_image">{{ $lang == 'ar' ? 'صورة إيصال التحويل' : 'Transfer Receipt Image' }}</label>
+                                    <input type="file" style="text-align: center;" name="transfer_image"
+                                        id="transfer_image" required>
+                                </div>
+                                <button type="submit">{{ $lang == 'ar' ? 'إرسال' : 'Submit' }}</button>
+                            </form>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="submit-button" style="display: none;">
+                            {{ $lang == 'ar' ? 'متابعة الدفع' : 'Continue Payment' }}
+                        </button>
+
+                        <!-- PayPal Account Form -->
+                        <form id="paypal-form"
+                            action="{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
+                            method="POST" style="display: none;">
+                            @csrf
+                            <button style="width: 100%;" type="submit">
+                                {{ $lang == 'ar' ? 'متابعة الدفع' : 'Continue Payment' }}
+                            </button>
+                        </form>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <div class="mt-4 text-center">
+        <p>{{ __('Or pay with') }}</p>
+        <a href="{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
+            class="btn btn-secondary">
+            <i class="fab fa-paypal"></i> PayPal
+        </a>
+        <a href="{{ route('payment.transfer', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}"
+            class="btn btn-outline-secondary ml-2">
+            <i class="fas fa-university"></i> {{ __('Bank Transfer') }}
+        </a>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    showPayPalOptions();
+
+    paypal.Buttons({
+        createOrder: function(data, actions) {
+            return actions.order.create({
+                purchase_units: [{
+                    amount: {
+                        value: '{{ $price }}',
+                        currency_code: 'USD'
+                    },
+                    description: 'Subscription for {{ $subscriber->mainCategory->name_en }}'
+                }],
+                application_context: {
+                    shipping_preference: 'NO_SHIPPING'
+                }
+            });
+        },
+        onApprove: function(data, actions) {
+            return actions.order.capture().then(function(orderData) {
+                fetch('{{ route('payment.process-paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        orderID: orderData.id,
+                        payerID: orderData.payer.payer_id
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '{{ route('payment.success', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}' + '?payment_id=' + orderData.id;
+                    } else {
+                        document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ أثناء معالجة الدفع، حاول مرة أخرى.' : 'An error occurred while processing the payment, please try again.' }}';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ، حاول مرة أخرى.' : 'An error occurred, please try again.' }}';
+                });
+            });
+        },
+        onError: function(err) {
+            console.error('PayPal Error:', err);
+            document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ في عملية الدفع.' : 'An error occurred during payment.' }}';
+        }
+    }).render('#paypal-button-container');
+
+    function showPayPalOptions() {
+        selectedPaymentMethod = 'paypal';
+        document.getElementById('paypal-options-container').style.display = 'block';
+        document.getElementById('fawry-instructions').style.display = 'none';
+        document.getElementById('transfer_image').removeAttribute('required');
+        resetOptionButtons();
+        if (selectedPaymentOption) {
+            document.getElementById(selectedPaymentOption + '-btn').classList.add('selected');
+        }
+    }
+
+    function showFawryOptions() {
+        selectedPaymentMethod = 'fawry';
+        document.getElementById('paypal-options-container').style.display = 'none';
+        document.getElementById('fawry-instructions').style.display = 'block';
+        document.getElementById('submit-button').style.display = 'none';
+        document.getElementById('transfer_image').setAttribute('required', '');
+        selectedPaymentOption = null;
+        resetOptionButtons();
+    }
+
+    function resetOptionButtons() {
+        const optionButtons = document.querySelectorAll('.payment-option-button');
+        optionButtons.forEach(button => button.classList.remove('selected'));
+    }
+
+    function selectPaymentOption(option, formAction) {
+        console.log('Selected Option:', option, 'Form Action:', formAction);
+        selectedPaymentOption = option;
+        selectedFormAction = formAction;
+        resetOptionButtons();
+        document.getElementById(option + '-btn').classList.add('selected');
+        updatePaymentTypeField(option);
+        document.getElementById('submit-button').style.display = 'none';
+        document.getElementById('paypal-form').style.display = 'none';
+        document.getElementById('card-form').style.display = 'none';
+        if (option === 'paypal-account') {
+            document.getElementById('paypal-form').style.display = 'block';
+            document.getElementById('paypal-form').action = formAction;
+        } else if (option === 'paypal-card') {
+            document.getElementById('card-form').style.display = 'block';
+            document.getElementById('payment-form').action = formAction;
+        } else {
+            document.getElementById('submit-button').style.display = 'block';
+        }
+    }
+
+    function updatePaymentTypeField(option) {
+        let paymentTypeInput = document.querySelector('input[name="payment_type"]');
+        if (!paymentTypeInput) {
+            paymentTypeInput = document.createElement('input');
+            paymentTypeInput.type = 'hidden';
+            paymentTypeInput.name = 'payment_type';
+            document.getElementById('payment-form').appendChild(paymentTypeInput);
+        }
+        paymentTypeInput.value = option;
+    }
+});
+
+
+    </script>
+    <script
+        src="https://www.paypal.com/sdk/js?client-id=AQHf4W6pc8XEeFoa3AqCJp4zl6jqwaGtw867CiE5EWcatMvIRc9dNTifo9HDpFyo_F4DMyoCEPmXVgHy&buyer-country=US&currency=USD&components=buttons&enable-funding=venmo">
+    </script>
+    {{-- Import app.js  --}}
+    <script src="{{ asset('js/app.js') }}"></script>
 </body>
+
 </html>

@@ -2,8 +2,6 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\GameTypeController;
-use App\Models\GameType;
 use Illuminate\Support\Facades\App;
 use App\Http\Controllers\Admin\GameController;
 use App\Http\Controllers\Admin\NewsController;
@@ -28,6 +26,15 @@ use App\Models\Plan;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\PaymentController;
 
+Route::prefix('{lang}')->group(function () {
+    Route::get('/games', [SubscriberController::class, 'index'])->name('games.index');
+    Route::get('/games/create', [SubscriberController::class, 'create'])->name('games.create');
+    Route::post('/games', [SubscriberController::class, 'store'])->name('games.store');
+    Route::get('/games/{game}/edit', [SubscriberController::class, 'edit'])->name('games.edit');
+    Route::put('/games/{game}', [SubscriberController::class, 'update'])->name('games.update');
+    Route::delete('/games/{game}', [SubscriberController::class, 'destroy'])->name('games.destroy');
+});
+
 Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::get('plans', function ($lang) {
         App::setLocale($lang);
@@ -46,7 +53,7 @@ Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::get('/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
 
     Route::get('/payment/paypal/{subscriber_id}/{type?}', [PaymentController::class, 'paypal'])->name('payment.paypal');
-    Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'paypal'])->name('payment.process-paypal');
+    Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'processPaypal'])->name('payment.process-paypal');
     Route::post('/payment/process-card/{subscriber_id}', [PaymentController::class, 'processCardPayment'])->name('payment.process-card');
     Route::get('/payment/success/{subscriber_id}', [PaymentController::class, 'success'])->name('payment.success');
     Route::get('/payment/cancel/{subscriber_id}', [PaymentController::class, 'cancel'])->name('payment.cancel');
@@ -55,11 +62,10 @@ Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
 });
 
 // Add the missing PayPal route
-Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'paypal'])->name('payment.paypal');
-Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
+Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'processPaypal'])->name('payment.process-paypal');Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
 Route::post('/subscriber/store', [SubscriberController::class, 'store'])->name('subscriber.store');
-Route::get('/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
-
+Route::get('/{lang}/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
+Route::post('/{lang}/subscriber', [SubscriberController::class, 'store'])->name('subscriber.store');
 Route::get('/plans', function () {
     $lang = session('language', 'ar');
     return redirect("/{$lang}/plans");
@@ -180,7 +186,6 @@ Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
         Route::resource('plans', PlanController::class);
         Route::resource('news', NewsController::class);
         Route::resource('know-us', KnowUsController::class);
-        Route::resource('game-types', GameTypeController::class);
         Route::resource('faqs', FaqController::class);
 
         // Terms and Conditions

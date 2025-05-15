@@ -18,10 +18,10 @@
         {{-- Start Header --}}
         <header
             style="border-bottom: 5px solid var(--main-color); z-index: 9; position: relative; padding: 20px 35px; display: grid; align-items: center; grid-template-columns: repeat(3, minmax(0, 1fr));">
-            <a href="/"
+            {{-- <a href="/"
                 style="text-align: left; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
                 {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
-            </a>
+            </a> --}}
             <div class="logo-container" style="text-align: center;">
                 <a href="/" class="logo-link">
                     <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;"
@@ -37,6 +37,7 @@
                         stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </a>
+
         </header>
         {{-- End Header --}}
 

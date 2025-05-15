@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Game;
+use App\Models\Subscriber;
 use App\Models\MainCategory;
 use App\Models\SubCategory;
 use Illuminate\Http\Request;
@@ -12,6 +13,64 @@ use Illuminate\Support\Str;
 
 class GameController extends Controller
 {
+    public function edit($lang, $game)
+    {
+        $game = Subscriber::findOrFail($game);
+        return view('admin.games.edit', compact('game', 'lang'));
+    }
+
+    public function update(Request $request, $lang, $game)
+    {
+        $subscriber = Subscriber::findOrFail($game);
+
+        $validated = $request->validate([
+            'dns_username' => 'nullable|string|max:255',
+            'dns_password' => 'nullable|string|max:255',
+            'dns_link' => 'nullable|url|max:255',
+            'dns_expiry_date' => 'nullable|date',
+            'activation_code' => 'nullable|string|max:20',
+            'status' => 'required|in:active,inactive,expired,canceled,pending_dns',
+        ]);
+
+        $subscriber->update($validated);
+
+        return redirect()->route('games.index', ['lang' => $lang])
+            ->with('success', $lang == 'ar' ? 'تم تحديث الإشتراك بنجاح!' : 'Subscription updated successfully!');
+    }
+
+    public function showForm(Request $request, $lang)
+    {
+        $mainCategoryId = $request->query('main_category_id');
+        $subCategoryId = $request->query('sub_category_id');
+        $duration = $request->query('duration', 30); // افتراضي 30 إذا لم يتم تمرير القيمة
+
+        // Validate query parameters
+        if (!$mainCategoryId || !$subCategoryId) {
+            return redirect()->route('plans', ['lang' => $lang])
+                ->with('error', $lang == 'ar' ? 'باقة أو خطة غير صالحة.' : 'Invalid package or plan.');
+        }
+
+        // جلب MainCategory مع SubCategories
+        $mainCategory = MainCategory::with('subCategories')->findOrFail($mainCategoryId);
+
+        // جلب SubCategory بناءً على sub_category_id الممرر
+        $subCategory = SubCategory::where('id', $subCategoryId)
+            ->where('main_category_id', $mainCategoryId)
+            ->first();
+
+        if (!$subCategory) {
+            return redirect()->route('plans', ['lang' => $lang])
+                ->with('error', $lang == 'ar' ? 'الخطة غير متاحة.' : 'Plan not available.');
+        }
+
+        // استخدام السعر والمدة من SubCategory المختارة
+        $price = $subCategory->price;
+        $duration = $subCategory->duration;
+
+        $game = $mainCategory;
+
+        return view('subscriber.form', compact('mainCategory', 'subCategory', 'price', 'duration', 'lang', 'game'));
+    }
     public function show($lang, Game $game)
     {
         return view('admin.games.show', compact('game', 'lang'));
@@ -31,10 +90,11 @@ class GameController extends Controller
         if ($request->has('status') && in_array($request->status, ['active', 'inactive', 'expired', 'canceled', 'pending_dns'])) {
             $query->where('status', $request->status);
         }
-
+        
         $games = $query->with(['mainCategory', 'subCategories'])->paginate(10);
+        $subscribers = Subscriber::all();
 
-        return view('admin.games.index', compact('games', 'lang'));
+        return view('admin.games.index', compact('games', 'lang', 'subscribers'));
     }
 
     public function create()
@@ -118,96 +178,96 @@ class GameController extends Controller
         return redirect()->route('games.index', ['lang' => $lang])->with('success', 'تم إضافة الحساب بنجاح!');
     }
 
-    public function edit($lang, Game $game)
-    {
-        $mainCategories = MainCategory::where('status', '1')->get();
-        $subCategories = SubCategory::where('status', true)->get();
-        $selectedSubCategories = $game->subCategories->pluck('id')->toArray();
-        return view('admin.games.edit', compact('game', 'lang', 'mainCategories', 'subCategories', 'selectedSubCategories'));
-    }
+    // public function edit($lang, Game $game)
+    // {
+    //     $mainCategories = MainCategory::where('status', '1')->get();
+    //     $subCategories = SubCategory::where('status', true)->get();
+    //     $selectedSubCategories = $game->subCategories->pluck('id')->toArray();
+    //     return view('admin.games.edit', compact('game', 'lang', 'mainCategories', 'subCategories', 'selectedSubCategories'));
+    // }
 
-    public function update(Request $request, $lang, Game $game)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'country' => 'required|string|in:EG,SA,AE,KW,QA,BH,OM,JO,LB,MA,TN,DZ',
-            'main_category' => 'required|exists:main_categories,id',
-            'sub_categories' => 'required|array|min:1',
-            'sub_categories.*' => 'exists:sub_categories,id',
-            'description_ar' => 'required|array|min:1',
-            'description_ar.*' => 'required|string|max:255',
-            'description_en' => 'required|array|min:1',
-            'description_en.*' => 'required|string|max:255',
-            'username' => 'required|string|max:255',
-            'password' => 'nullable|string|min:6',
-            'dns_usernames.*' => 'nullable|string|max:255',
-            'dns_urls.*' => 'nullable|url',
-            'dns_expiry_date' => 'nullable|date',
-            'activation_code' => 'required|string|size:10',
-            'status' => 'required|in:active,inactive,expired,canceled,pending_dns',
-        ]);
+    // public function update(Request $request, $lang, Game $game)
+    // {
+    //     $validated = $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|max:255',
+    //         'country' => 'required|string|in:EG,SA,AE,KW,QA,BH,OM,JO,LB,MA,TN,DZ',
+    //         'main_category' => 'required|exists:main_categories,id',
+    //         'sub_categories' => 'required|array|min:1',
+    //         'sub_categories.*' => 'exists:sub_categories,id',
+    //         'description_ar' => 'required|array|min:1',
+    //         'description_ar.*' => 'required|string|max:255',
+    //         'description_en' => 'required|array|min:1',
+    //         'description_en.*' => 'required|string|max:255',
+    //         'username' => 'required|string|max:255',
+    //         'password' => 'nullable|string|min:6',
+    //         'dns_usernames.*' => 'nullable|string|max:255',
+    //         'dns_urls.*' => 'nullable|url',
+    //         'dns_expiry_date' => 'nullable|date',
+    //         'activation_code' => 'required|string|size:10',
+    //         'status' => 'required|in:active,inactive,expired,canceled,pending_dns',
+    //     ]);
 
-        $activation_code = $validated['activation_code'];
-        if ($activation_code != $game->activation_code) {
-            if (Game::where('activation_code', $activation_code)->where('id', '!=', $game->id)->exists()) {
-                return redirect()->back()->withErrors(['activation_code' => 'رمز التفعيل مستخدم بالفعل'])->withInput();
-            }
-        }
+    //     $activation_code = $validated['activation_code'];
+    //     if ($activation_code != $game->activation_code) {
+    //         if (Game::where('activation_code', $activation_code)->where('id', '!=', $game->id)->exists()) {
+    //             return redirect()->back()->withErrors(['activation_code' => 'رمز التفعيل مستخدم بالفعل'])->withInput();
+    //         }
+    //     }
 
-        $image = $this->getImageForCategory($validated['main_category']);
+    //     $image = $this->getImageForCategory($validated['main_category']);
 
-        $maxDays = 30;
-        foreach ($validated['sub_categories'] as $subCategoryId) {
-            $subCategory = SubCategory::find($subCategoryId);
-            if ($subCategory && ($subCategory->duration ?? 30) > $maxDays) {
-                $maxDays = $subCategory->duration ?? 30;
-            }
-        }
-        $expiry_date = (new \DateTime($game->registration_date))->modify("+{$maxDays} days")->format('Y-m-d');
+    //     $maxDays = 30;
+    //     foreach ($validated['sub_categories'] as $subCategoryId) {
+    //         $subCategory = SubCategory::find($subCategoryId);
+    //         if ($subCategory && ($subCategory->duration ?? 30) > $maxDays) {
+    //             $maxDays = $subCategory->duration ?? 30;
+    //         }
+    //     }
+    //     $expiry_date = (new \DateTime($game->registration_date))->modify("+{$maxDays} days")->format('Y-m-d');
 
-        $dnsServers = [];
-        if ($request->existing_dns) {
-            foreach ($request->existing_dns as $index => $dns) {
-                $dnsServers[] = [
-                    'username' => $request->updated_dns[$index]['username'] ?? $dns['username'],
-                    'url' => $request->updated_dns[$index]['url'] ?? $dns['url'],
-                ];
-            }
-        }
-        if ($request->dns_usernames) {
-            foreach ($request->dns_usernames as $index => $username) {
-                if ($username || $request->dns_urls[$index]) {
-                    $dnsServers[] = [
-                        'username' => $username,
-                        'url' => $request->dns_urls[$index] ?? null,
-                    ];
-                }
-            }
-        }
+    //     $dnsServers = [];
+    //     if ($request->existing_dns) {
+    //         foreach ($request->existing_dns as $index => $dns) {
+    //             $dnsServers[] = [
+    //                 'username' => $request->updated_dns[$index]['username'] ?? $dns['username'],
+    //                 'url' => $request->updated_dns[$index]['url'] ?? $dns['url'],
+    //             ];
+    //         }
+    //     }
+    //     if ($request->dns_usernames) {
+    //         foreach ($request->dns_usernames as $index => $username) {
+    //             if ($username || $request->dns_urls[$index]) {
+    //                 $dnsServers[] = [
+    //                     'username' => $username,
+    //                     'url' => $request->dns_urls[$index] ?? null,
+    //                 ];
+    //             }
+    //         }
+    //     }
 
-        $game->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'country' => $validated['country'],
-            'main_category' => $validated['main_category'],
-            'image' => $image,
-            'description_ar' => $validated['description_ar'],
-            'description_en' => $validated['description_en'],
-            'registration_date' => $game->registration_date,
-            'expiry_date' => $expiry_date,
-            'username' => $validated['username'],
-            'password' => $request->password ? bcrypt($validated['password']) : $game->password,
-            'dns_servers' => json_encode($dnsServers),
-            'dns_expiry_date' => $validated['dns_expiry_date'],
-            'activation_code' => $activation_code,
-            'status' => $validated['status'],
-        ]);
+    //     $game->update([
+    //         'name' => $validated['name'],
+    //         'email' => $validated['email'],
+    //         'country' => $validated['country'],
+    //         'main_category' => $validated['main_category'],
+    //         'image' => $image,
+    //         'description_ar' => $validated['description_ar'],
+    //         'description_en' => $validated['description_en'],
+    //         'registration_date' => $game->registration_date,
+    //         'expiry_date' => $expiry_date,
+    //         'username' => $validated['username'],
+    //         'password' => $request->password ? bcrypt($validated['password']) : $game->password,
+    //         'dns_servers' => json_encode($dnsServers),
+    //         'dns_expiry_date' => $validated['dns_expiry_date'],
+    //         'activation_code' => $activation_code,
+    //         'status' => $validated['status'],
+    //     ]);
 
-        $game->subCategories()->sync($validated['sub_categories']);
+    //     $game->subCategories()->sync($validated['sub_categories']);
 
-        return redirect()->route('games.index', ['lang' => $lang])->with('success', 'تم تحديث الحساب بنجاح!');
-    }
+    //     return redirect()->route('games.index', ['lang' => $lang])->with('success', 'تم تحديث الحساب بنجاح!');
+    // }
 
     public function destroy($lang, $id)
     {

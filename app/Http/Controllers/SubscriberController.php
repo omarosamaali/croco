@@ -12,6 +12,30 @@ use App\Models\MainCategory;
 
 class SubscriberController extends Controller
 {
+    public function edit($lang, $game)
+    {
+        $game = Subscriber::findOrFail($game);
+        return view('games.edit', compact('game', 'lang'));
+    }
+
+    public function update(Request $request, $lang, $game)
+    {
+        $subscriber = Subscriber::findOrFail($game);
+
+        $validated = $request->validate([
+            'dns_username' => 'nullable|string|max:255',
+            'dns_password' => 'nullable|string|max:255',
+            'dns_link' => 'nullable|url|max:255',
+            'dns_expiry_date' => 'nullable|date',
+            'activation_code' => 'nullable|string|max:20',
+            'status' => 'required|in:active,inactive,expired,canceled,pending_dns',
+        ]);
+
+        $subscriber->update($validated);
+
+        return redirect()->route('games.index', ['lang' => $lang])
+            ->with('success', $lang == 'ar' ? 'تم تحديث الإشتراك بنجاح!' : 'Subscription updated successfully!');
+    }
 
     public function showForm(Request $request, $lang)
     {
@@ -47,27 +71,39 @@ class SubscriberController extends Controller
         return view('subscriber.form', compact('mainCategory', 'subCategory', 'price', 'duration', 'lang', 'game'));
     }
 
-    public function store(Request $request, $lang)
+    public function store(Request $request)
     {
+        $lang = $request->route('lang'); // جلب الـ lang من الـ route
+
         $validated = $request->validate([
-            'main_category_id' => 'required|exists:main_categories,id',
-            'sub_category_id' => 'required|exists:sub_categories,id',
+            'game_id' => 'required|exists:main_categories,id',
+            'duration' => 'required|integer',
             'country' => 'required|string|in:EG,SA,AE,KW,QA,BH,OM,JO,LB,MA,TN,DZ',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'required|string|max:20',
         ]);
 
+        // جلب السعر بناءً على sub_category_id أو duration
+        $subCategory = SubCategory::where('main_category_id', $validated['game_id'])
+            ->where('duration', $validated['duration'])
+            ->first();
+
+        if (!$subCategory) {
+            return redirect()->back()->with('error', $lang == 'ar' ? 'الخطة غير متاحة.' : 'Plan not available.');
+        }
+
         // Store subscriber data
         $subscriber = Subscriber::create([
-            'main_category_id' => $validated['main_category_id'],
-            'sub_category_id' => $validated['sub_category_id'],
+            'main_category_id' => $validated['game_id'],
+            'sub_category_id' => $subCategory->id,
             'country' => $validated['country'],
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'price' => SubCategory::find($validated['sub_category_id'])->price,
-            'status' => 'pending',
+            'price' => $subCategory->price,
+            'duration' => $validated['duration'],
+            'status' => 'بانتظار DNS',
         ]);
 
         // Redirect to confirmation page
@@ -76,13 +112,12 @@ class SubscriberController extends Controller
             'subscriber_id' => $subscriber->id
         ])->with('success', $lang == 'ar' ? 'تم حفظ بيانات الاشتراك بنجاح!' : 'Subscriber data saved successfully!');
     }
-    public function showConfirm(Request $request, $subscriber_id)
+
+    public function showConfirm(Request $request, $lang, $subscriber_id)
     {
-        $lang = app()->getLocale();
-        $subscriber = Subscriber::with('game.subCategories')->findOrFail($subscriber_id);
-        $price = $subscriber->game->subCategories->where('duration', $subscriber->duration)->first()->price ?? 0;
+        $subscriber = Subscriber::with('mainCategory', 'subCategory')->findOrFail($subscriber_id);
+        $price = $subscriber->subCategory->price ?? 0;
 
         return view('subscriber.confirm', compact('subscriber', 'price', 'lang'));
     }
-
 }

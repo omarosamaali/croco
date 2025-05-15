@@ -127,22 +127,29 @@
     <div class="overlay"></div>
 
     <!-- Header -->
-    <header>
-        <a href="/" style="text-align: {{ $lang == 'ar' ? 'right' : 'left' }}; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
-            {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
-        </a>
-        <div class="logo-container" style="text-align: center;">
-            <a href="/" class="logo-link">
-                <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;" class="logo" alt="Joystick Logo">
+        <header
+            style="border-bottom: 5px solid var(--main-color); z-index: 9; position: relative; padding: 20px 35px; display: grid; align-items: center; grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <a href="/" style="text-align: right;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
+                    fill="none">
+                    <path d="M14.4297 5.92969L20.4997 11.9997L14.4297 18.0697" stroke="white" stroke-width="1.5"
+                        stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M3.5 12H20.33" stroke="white" stroke-width="1.5" stroke-miterlimit="10"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
             </a>
-        </div>
-        <a href="/" style="text-align: {{ $lang == 'ar' ? 'left' : 'right' }};">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none">
-                <path d="{{ $lang == 'ar' ? 'M9.5703 5.92969L3.5003 11.9997L9.5703 18.0697' : 'M14.4297 5.92969L20.4997 11.9997L14.4297 18.0697' }}" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="{{ $lang == 'ar' ? 'M20.5 12H3.67' : 'M3.5 12H20.33' }}" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-        </a>
-    </header>
+
+            <div class="logo-container" style="text-align: center;">
+                <a href="/" class="logo-link">
+                    <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;"
+                        class="logo" alt="Joystick Logo">
+                </a>
+            </div>
+            {{-- <a href="/"
+                style="text-align: left; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
+                {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
+            </a> --}}
+        </header>
 
     <!-- Success Container -->
     <div class="success-container">

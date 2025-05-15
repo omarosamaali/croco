@@ -101,12 +101,13 @@
                         </tr>
                     </thead>
                     <tbody style="color: white;">
-                        @forelse ($games as $index => $game)
+                        @forelse ($subscribers as $index => $game)
                             <tr style="border-bottom: 1px solid #2c2c38;">
                                 <td style="padding: 0.75rem 1rem; text-align: right;">{{ $index + 1 }}</td>
                                 <td style="padding: 0.75rem 1rem;">
                                     <div>{{ $game->name }}</div>
-                                    <div style="color: #9ca3af; font-size: 0.875rem;">{{ Str::limit($game->email, 10) }}</div>
+                                    <div style="color: #9ca3af; font-size: 0.875rem;">{{ Str::limit($game->email, 10) }}
+                                    </div>
                                 </td>
                                 <td style="padding: 0.75rem 1rem; text-align: right;">
                                     @if ($game->mainCategory && $game->mainCategory->image)
@@ -119,23 +120,21 @@
                                         </div>
                                     @endif
                                 </td>
+
                                 <td style="padding: 0.75rem 1rem; text-align: right;">
                                     {{ $game->mainCategory ? ($lang == 'ar' ? $game->mainCategory->name_ar : $game->mainCategory->name_en) : ($lang == 'ar' ? 'غير محدد' : 'Not specified') }}
                                 </td>
+
                                 <td style="padding: 0.75rem 1rem; text-align: right;">
-                                    @if ($game->subCategories->isNotEmpty())
-                                        @foreach ($game->subCategories as $subCategory)
-                                            <span>{{ $lang == 'ar' ? $subCategory->name_ar : $subCategory->name_en }}</span>
-                                            @if (!$loop->last)
-                                                <span>, </span> <!-- إضافة فاصلة بين الأسماء -->
-                                            @endif
-                                        @endforeach
-                                    @else
-                                        <span style="color: #9ca3af;">{{ $lang == 'ar' ? 'لا توجد خطط' : 'No plans' }}</span>
-                                    @endif
+                                    {{ $game->subCategory ? ($lang == 'ar' ? $game->subCategory->name_ar : $game->subCategory->name_en) : ($lang == 'ar' ? 'غير محدد' : 'Not specified') }}
                                 </td>
+
                                 <td style="padding: 0.75rem 1rem; text-align: right;">
-                                    {{ Str::limit($game->expiry_date, 10) }}
+                                    @if ($game->subCategory && $game->subCategory->duration)
+                                        {{ \Carbon\Carbon::parse($game->created_at)->addDays($game->subCategory->duration)->format('Y-m-d') }}
+                                    @else
+                                        {{ $lang == 'ar' ? 'غير محدد' : 'Not specified' }}
+                                    @endif
                                 </td>
                                 <td style="padding: 0.75rem 1rem; text-align: right;">
                                     {{ $game->country }}

@@ -88,6 +88,7 @@
                 </div>
             @endif
             <form action="{{ route('subscriber.store', ['lang' => $lang]) }}" method="POST">
+                
                 @csrf
                 <input type="hidden" name="game_id" value="{{ $mainCategory->id }}">
                 <input type="hidden" name="duration" value="{{ $duration }}">

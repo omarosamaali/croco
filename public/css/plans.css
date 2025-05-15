@@ -172,7 +172,7 @@ button:hover {
     display: flex;
     align-items: center;
     object-fit: contain !important;
-     margin-bottom: 20px;
+    margin-bottom: 20px;
     justify-self: center;
     border-radius: var(--border-radius);
 }
@@ -451,3 +451,134 @@ button:hover {
     color: #d1d5db;
     margin-bottom: 0.5rem;
 }
+
+.paypal-button-row,
+.paypal-button.paypal-button-text-color-black,
+.paypal-button-row.paypal-button-layout-vertical {
+    display: none !important;
+}
+
+.payment-options-container {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    display: none;
+}
+
+.payment-option-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: black;
+    background-color: white;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.payment-option-button:hover {
+    background-color: #f0f0f0;
+    border-color: #999;
+}
+
+.payment-option-button.selected {
+    background-color: #e6f7ff;
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.payment-icon {
+    width: 40px;
+    height: 30px;
+    margin-right: 15px;
+    vertical-align: middle;
+    object-fit: contain;
+}
+
+#card-form,
+#fawry-instructions {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    display: none;
+}
+
+#fawry-instructions {
+    text-align: center;
+}
+
+#card-form div {
+    margin-bottom: 10px;
+}
+
+#card-form label {
+    display: block;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+#card-form select,
+#card-form input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#card-form .flex-row {
+    display: flex;
+    gap: 10px;
+}
+
+#card-form .flex-row div {
+    flex: 1;
+}
+
+#card-form button {
+    width: 100%;
+    padding: 10px;
+    background-color: #1890ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+@media(min-width: 768px) {
+    #paypal-phone-btn {
+        display: none !important;
+    }
+}
+
+@media(max-width: 850px) {
+    .container-details {
+        flex-direction: column;
+    }
+
+    .details,
+    .payment-methods {
+        width: 100%;
+    }
+
+    .divider {
+        display: none;
+    }
+}
+
+.paypal-button-row.paypal-button-layout-vertical {
+    display: none !important;
+}
+
+.paypal-button-container {
+    width: 92% !important;
+}
+

@@ -21,6 +21,10 @@ class Subscriber extends Model
         'payment_status',
         'payment_date',
         'activation_code',
+        'dns_username',
+        'dns_password',
+        'dns_link',
+        'dns_expiry_date',
     ];
 
     public function mainCategory()

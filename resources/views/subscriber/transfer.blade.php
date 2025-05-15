@@ -74,16 +74,6 @@
         {{-- Start Header --}}
         <header
             style="border-bottom: 5px solid var(--main-color); z-index: 9; position: relative; padding: 20px 35px; display: grid; align-items: center; grid-template-columns: repeat(3, minmax(0, 1fr));">
-            <a href="/"
-                style="text-align: left; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
-                {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
-            </a>
-            <div class="logo-container" style="text-align: center;">
-                <a href="/" class="logo-link">
-                    <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;"
-                        class="logo" alt="Joystick Logo">
-                </a>
-            </div>
             <a href="/" style="text-align: right;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
                     fill="none">
@@ -93,6 +83,17 @@
                         stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </a>
+
+            <div class="logo-container" style="text-align: center;">
+                <a href="/" class="logo-link">
+                    <img src="{{ asset('assets/img/joystik-logo.svg') }}" style="width: 120px !important;"
+                        class="logo" alt="Joystick Logo">
+                </a>
+            </div>
+            {{-- <a href="/"
+                style="text-align: left; font-size: 20px; color: var(--main-color); text-decoration: none; font-weight: bold; font-family: 'cairo';">
+                {{ $lang == 'ar' ? 'تسجيل دخول' : 'Login' }}
+            </a> --}}
         </header>
         {{-- End Header --}}
 
