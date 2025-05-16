@@ -1,8 +1,17 @@
 <?php
+use Illuminate\Support\Facades\App;
+
+if (!function_exists('getViewData')) {
+    function getViewData($lang)
+    {
+        App::setLocale($lang);
+        session(['language' => $lang]);
+        return ['lang' => $lang];
+    }
+}
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\App;
 use App\Http\Controllers\Admin\GameController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\KnowUsController;
@@ -25,6 +34,11 @@ use Illuminate\Http\Request;
 use App\Models\Plan;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\PaymentController;
+
+
+
+
+Route::post('{lang}/process-paypal/{subscriber_id}', [PaymentController::class, 'processPaypal'])->name('payment.process-paypal');
 
 Route::prefix('{lang}')->group(function () {
     Route::get('/games', [SubscriberController::class, 'index'])->name('games.index');
@@ -61,16 +75,15 @@ Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::post('/payment/transfer/{subscriber_id}', [PaymentController::class, 'storeTransfer'])->name('payment.transfer.store');
 });
 
-// Add the missing PayPal route
-Route::post('/payment/process-paypal/{subscriber_id}', [PaymentController::class, 'processPaypal'])->name('payment.process-paypal');Route::get('/subscriber-form', [SubscriberController::class, 'showForm'])->name('subscriber.form');
-Route::post('/subscriber/store', [SubscriberController::class, 'store'])->name('subscriber.store');
-Route::get('/{lang}/subscriber/confirm/{subscriber_id}', [SubscriberController::class, 'showConfirm'])->name('subscriber.confirm');
-Route::post('/{lang}/subscriber', [SubscriberController::class, 'store'])->name('subscriber.store');
+
+
+
+
+
 Route::get('/plans', function () {
     $lang = session('language', 'ar');
     return redirect("/{$lang}/plans");
 });
-
 
 Route::group(['prefix' => 'subscriptions', 'middleware' => ['api']], function () {
     Route::post('/check-activation', [GameApiController::class, 'checkActivationCode']);
@@ -83,18 +96,7 @@ $banners = Banner::available()->orderBy('created_at', 'desc')->get();
 view()->share('banners', $banners);
 
 // Function to set locale and get view data
-function getViewData($lang)
-{
-    App::setLocale($lang);
-    session(['language' => $lang]);
-    return ['lang' => $lang];
-}
 
-// Root redirect
-Route::get('/', function () {
-    $lang = session('language', 'ar'); // Default to 'ar' if no session
-    return redirect("/{$lang}");
-});
 
 Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
     Route::get('/dashboard', function ($lang) {
@@ -118,7 +120,7 @@ Route::prefix('{lang}')->where(['lang' => 'en|ar'])->group(function () {
         $data['news'] = \App\Models\News::all();
         return view('welcome', $data);
     })->name('home');
-    Route::resource('games', GameController::class);
+    // Route::resource('games', GameController::class);
 
     Route::middleware('auth')->group(function () {
         Route::get('/profile', function ($lang) {

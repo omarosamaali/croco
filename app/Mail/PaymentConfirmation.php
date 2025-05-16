@@ -3,11 +3,12 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Subscriber;
 
-class PaymentConfirmation extends Mailable
+class PaymentConfirmation extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -19,10 +20,10 @@ class PaymentConfirmation extends Mailable
         $this->subscriber = $subscriber;
         $this->lang = $lang;
     }
-
     public function build()
     {
-        return $this->view('emails.payment_confirmation')
+        return $this->to($this->subscriber->email) // هنا تحدد المستلم باستخدام بريد المشترك
+            ->view('emails.payment_confirmation')
             ->subject($this->lang === 'ar' ? 'تأكيد الدفع' : 'Payment Confirmation');
     }
 }

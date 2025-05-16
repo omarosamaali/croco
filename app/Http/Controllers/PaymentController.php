@@ -8,34 +8,36 @@ use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Illuminate\Support\Str;
 use App\Models\PaymentTransaction;
 use Illuminate\Support\Facades\Log;
-use App\Mail\PaymentConfirmation;
-use Illuminate\Support\Facades\Mail;
+use App\Mail\PaymentConfirmation; // هذه لا تزال مستخدمة لإرسال البريد الأولي
+use Illuminate\Support\Facades\Mail; // هذه لا تزال مستخدمة لإرسال البريد الأولي
 
 class PaymentController extends Controller
 {
     public function processPaypal(Request $request, $lang, $subscriber_id)
     {
-        $subscriber = Subscriber::with('mainCategory', 'subCategory')->findOrFail($subscriber_id);
-
+        $subscriber = Subscriber::findOrFail($subscriber_id);
         try {
+            $order_id = $request->input('orderID');
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
             $provider->getAccessToken();
-
-            $order_id = $request->input('orderID');
-            $response = $provider->capturePaymentOrder($order_id);
-
+            $response = $provider->showOrderDetails($order_id);
             if (isset($response['status']) && $response['status'] === 'COMPLETED') {
-                // تحديث حالة المشترك
-                $subscriber->status = 'active';
+                // حالة المشترك بعد الدفع، يمكنك تركها active أو تغييرها حسب سير عملك الدقيق
+                // إذا كانت pending_dns، فهذا منطقي ليعرف الأدمن أنه بانتظار التفعيل النهائي
+                $subscriber->status = 'active'; // أو 'pending_dns'
                 $subscriber->payment_status = 'paid';
                 $subscriber->payment_date = now();
-                if (empty($subscriber->activation_code)) {
-                    $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
-                }
-                $subscriber->save();
 
-                // تسجيل المعاملة
+                // **BEGINNING OF CODE TO REMOVE**
+                // هذا الكود هو الذي ينشئ activation_code تلقائيًا
+                // if (empty($subscriber->activation_code)) {
+                //     $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
+                // }
+                // **END OF CODE TO REMOVE**
+
+                $subscriber->save(); // حفظ التغييرات الأخرى (الحالة، تاريخ الدفع)
+
                 $transaction = new PaymentTransaction();
                 $transaction->subscriber_id = $subscriber_id;
                 $transaction->amount = $subscriber->price;
@@ -44,30 +46,49 @@ class PaymentController extends Controller
                 $transaction->status = 'completed';
                 $transaction->save();
 
-                // إرسال بريد التأكيد
-                try {
-                    Log::info('Attempting to send email to: ' . $subscriber->email, [
-                        'subscriber_id' => $subscriber_id,
-                        'lang' => $lang
-                    ]);
-                    Mail::to($subscriber->email)->send(new PaymentConfirmation($subscriber, $lang));
-                    Log::info('Payment confirmation email sent to: ' . $subscriber->email);
-                } catch (\Exception $e) {
-                    Log::error('Failed to send payment confirmation email: ' . $e->getMessage(), [
-                        'subscriber_id' => $subscriber_id,
-                        'email' => $subscriber->email,
-                        'error_trace' => $e->getTraceAsString()
-                    ]);
+                // **منطق إرسال البريد موجود هنا كما كان**
+                // هذا هو البريد الأولي الذي يجب أن يخبر المستخدم بأن الطلب قيد المراجعة
+                if (!empty($subscriber->email) && is_string($subscriber->email)) {
+                    try {
+                        Log::info('Attempting to queue email to: ' . $subscriber->email, [
+                            'subscriber_id' => $subscriber_id,
+                            'lang' => $lang
+                        ]);
+                        // يتم إرسال PaymentConfirmation Mailable هنا
+                        // يجب أن يتأكد هذا الـ Mailable (أو الـ View الخاص به) من عدم عرض activation_code إذا كان فارغاً
+                        Mail::queue(new PaymentConfirmation($subscriber, $lang), [], function ($message) use ($subscriber) {
+                            $message->to($subscriber->email)->onQueue('default');
+                        });
+                        Log::info('Payment confirmation email queued for: ' . $subscriber->email);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to queue payment confirmation email: ' . $e->getMessage(), [
+                            'subscriber_id' => $subscriber_id,
+                            'email' => $subscriber->email,
+                            'error_trace' => $e->getTraceAsString()
+                        ]);
+                    }
+                } else {
+                    Log::warning('Email is invalid or missing for subscriber: ' . $subscriber_id);
                 }
 
-                return response()->json(['success' => true]);
+                return redirect()->route('payment.success', [
+                    'lang' => $lang,
+                    'subscriber_id' => $subscriber_id,
+                    'payment_id' => $response['id']
+                ]);
             } else {
                 Log::error('PayPal payment not completed', ['response' => $response]);
-                return response()->json(['success' => false, 'error' => 'Payment not completed'], 400);
+                return redirect()->route('payment.cancel', [
+                    'lang' => $lang,
+                    'subscriber_id' => $subscriber_id
+                ])->with('error', 'Payment was not completed. Please try again.');
             }
         } catch (\Exception $e) {
-            Log::error('PayPal Error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'error' => 'PayPal error'], 500);
+            Log::error('PayPal Error: ' + $e->getMessage());
+            return redirect()->route('payment.cancel', [
+                'lang' => $lang,
+                'subscriber_id' => $subscriber_id
+            ])->with('error', 'An error occurred. Please try again.');
         }
     }
 
@@ -95,7 +116,7 @@ class PaymentController extends Controller
 
     public function paypal(Request $request, $lang, $subscriber_id)
     {
-        $subscriber = Subscriber::findOrFail($subscriber_id);
+        $subscriber = Subscriber::with('subCategory')->findOrFail($subscriber_id);
         return view('subscriber.confirm', [
             'subscriber' => $subscriber,
             'price' => $subscriber->subCategory->price ?? 0,
@@ -123,28 +144,45 @@ class PaymentController extends Controller
             $transaction->status = 'completed';
             $transaction->save();
 
-            $subscriber->status = 'active';
+            // حالة المشترك بعد الدفع
+            $subscriber->status = 'active'; // أو 'pending_dns'
             $subscriber->payment_status = 'paid';
             $subscriber->payment_date = now();
-            if (empty($subscriber->activation_code)) {
-                $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
-            }
-            $subscriber->save();
 
-            try {
-                Log::info('Attempting to send email to: ' . $subscriber->email, [
-                    'subscriber_id' => $subscriber_id,
-                    'lang' => $lang
-                ]);
-                Mail::to($subscriber->email)->send(new PaymentConfirmation($subscriber, $lang));
-                Log::info('Payment confirmation email sent to: ' . $subscriber->email);
-            } catch (\Exception $e) {
-                Log::error('Failed to send payment confirmation email: ' . $e->getMessage(), [
-                    'subscriber_id' => $subscriber_id,
-                    'email' => $subscriber->email,
-                    'error_trace' => $e->getTraceAsString()
-                ]);
+            // **BEGINNING OF CODE TO REMOVE**
+            // هذا الكود هو الذي ينشئ activation_code تلقائيًا
+            // if (empty($subscriber->activation_code)) {
+            //     $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
+            // }
+            // **END OF CODE TO REMOVE**
+
+            $subscriber->save(); // حفظ التغييرات الأخرى
+
+            // **منطق إرسال البريد موجود هنا كما كان**
+            // هذا هو البريد الأولي الذي يجب أن يخبر المستخدم بأن الطلب قيد المراجعة
+            if (!empty($subscriber->email) && is_string($subscriber->email)) {
+                try {
+                    Log::info('Attempting to queue email to: ' . $subscriber->email, [
+                        'subscriber_id' => $subscriber_id,
+                        'lang' => $lang
+                    ]);
+                    // يتم إرسال PaymentConfirmation Mailable هنا
+                    // يجب أن يتأكد هذا الـ Mailable (أو الـ View الخاص به) من عدم عرض activation_code إذا كان فارغاً
+                    Mail::queue(new PaymentConfirmation($subscriber, $lang), [], function ($message) use ($subscriber) {
+                        $message->to($subscriber->email)->onQueue('default');
+                    });
+                    Log::info('Payment confirmation email queued for: ' . $subscriber->email);
+                } catch (\Exception $e) {
+                    Log::error('Failed to queue payment confirmation email: ' + $e->getMessage(), [
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $subscriber->email,
+                        'error_trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } else {
+                Log::warning('Email is invalid or missing for subscriber: ' + $subscriber_id);
             }
+
 
             return redirect()->route('payment.success', [
                 'lang' => $lang,
@@ -152,7 +190,7 @@ class PaymentController extends Controller
                 'payment_id' => $transaction->transaction_id
             ])->with('success', __('Payment successful!'));
         } catch (\Exception $e) {
-            Log::error('Payment processing failed: ' . $e->getMessage());
+            Log::error('Payment processing failed: ' + $e->getMessage());
             return back()->with('error', __('An error occurred. Please try again.'))->withInput();
         }
     }
@@ -180,20 +218,52 @@ class PaymentController extends Controller
             $transaction->payment_method = 'bank_transfer';
             $transaction->transaction_id = 'transfer_' . Str::random(16);
             $transaction->receipt_image = $imagePath;
-            $transaction->status = 'pending';
+            $transaction->status = 'pending'; // حالة المعاملة هنا pending لأنها تتطلب مراجعة يدوية
             $transaction->save();
 
-            $subscriber->status = 'pending';
+            // حالة المشترك بعد التحويل، غالباً ستكون قيد المراجعة
+            $subscriber->status = 'pending_review'; // أو 'pending_dns'
             $subscriber->payment_status = 'pending';
             $subscriber->payment_date = now();
-            if (empty($subscriber->activation_code)) {
-                $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
+
+            // **BEGINNING OF CODE TO REMOVE**
+            // هذا الكود هو الذي ينشئ activation_code تلقائيًا
+            // if (empty($subscriber->activation_code)) {
+            //     $subscriber->activation_code = $subscriber->id . '-' . substr(md5($subscriber->email), 0, 6);
+            // }
+            // **END OF CODE TO REMOVE**
+
+            $subscriber->save(); // حفظ التغييرات الأخرى
+
+            // **منطق إرسال البريد هنا أيضاً إذا أردت إرسال تأكيد أولي للتحويل البنكي**
+            // هذا البريد يجب أن يخبر المستخدم أن طلب التحويل قيد المراجعة
+            if (!empty($subscriber->email) && is_string($subscriber->email)) {
+                try {
+                    Log::info('Attempting to queue initial transfer confirmation email (under review) to: ' . $subscriber->email, [
+                        'subscriber_id' => $subscriber_id,
+                        'lang' => $lang
+                    ]);
+                    // يتم إرسال PaymentConfirmation Mailable هنا
+                    // يجب أن يتأكد هذا الـ Mailable (أو الـ View الخاص به) من عدم عرض activation_code إذا كان فارغاً
+                    Mail::queue(new PaymentConfirmation($subscriber, $lang), [], function ($message) use ($subscriber) {
+                        $message->to($subscriber->email)->onQueue('default');
+                    });
+                    Log::info('Initial transfer confirmation email (under review) queued for: ' . $subscriber->email);
+                } catch (\Exception $e) {
+                    Log::error('Failed to queue initial transfer confirmation email: ' + $e->getMessage(), [
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $subscriber->email,
+                        'error_trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } else {
+                Log::warning('Email is invalid or missing for subscriber when attempting to send initial transfer confirmation: ' + $subscriber_id);
             }
-            $subscriber->save();
+
 
             return view('payment.transfer_success', compact('subscriber', 'lang'));
         } catch (\Exception $e) {
-            Log::error('Transfer processing error: ' . $e->getMessage());
+            Log::error('Transfer processing error: ' + $e->getMessage());
             return back()->with('error', __('An error occurred while processing your transfer. Please try again.'));
         }
     }

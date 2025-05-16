@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Game;
+use App\Models\Subscriber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
@@ -32,7 +32,7 @@ class GameApiController extends Controller
         }
 
         // البحث عن الاشتراك بواسطة رمز التفعيل
-        $game = Game::where('activation_code', $request->activation_code)
+        $game = Subscriber::where('activation_code', $request->activation_code)
             ->with(['mainCategory:id,name_ar,name_en,image', 'subCategory:id,name_ar,name_en,duration'])
             ->first();
 
@@ -69,7 +69,7 @@ class GameApiController extends Controller
         }
 
         // معالجة بيانات DNS
-        $dnsServers = json_decode($game->dns_servers, true) ?? [];
+        $dnsServers = json_decode($game->dns_link, true) ?? [];
         $dnsInfo = [];
 
         foreach ($dnsServers as $server) {
@@ -86,15 +86,16 @@ class GameApiController extends Controller
             'status' => true,
             'message' => 'تم التحقق من رمز التفعيل بنجاح',
             'subscription_data' => [
-                'username' => $game->username,
-                'password' => $this->getOriginalPassword($game), // دالة لاسترجاع كلمة المرور الأصلية
-                'dns_servers' => $dnsInfo,
-                'package_name' => $game->mainCategory->name_ar ?? '',
+                'dns_username' => $game->dns_username,
+                'password' => $game->dns_password, 
+                'dns_link' => $game->dns_link,
+                'name' => $game->name,
                 'package_image' => $game->mainCategory->image ?? '',
+                'package_name' => $game->mainCategory->name_ar ?? '',
                 'package_type' => $game->subCategory->name_ar ?? '',
-                'registration_date' => $game->registration_date,
-                'expiry_date' => $game->expiry_date,
-                'remaining_days' => $today->diffInDays($expiryDate)
+                // 'registration_date' => $game->registration_date,
+                'expiry_date' => $game->dns_expiry_date,
+                // 'remaining_days' => $today->diffInDays($expiryDate)
             ]
         ], 200);
     }
@@ -104,10 +105,10 @@ class GameApiController extends Controller
      * ملاحظة: هذه الطريقة ليست آمنة، لأن كلمات المرور يجب أن تكون مشفرة دائمًا
      * يجب تنفيذ آلية أكثر أمانًا لإدارة كلمات المرور
      *
-     * @param Game $game
+     * @param Subscriber $game
      * @return string
      */
-    private function getOriginalPassword(Game $game)
+    private function getOriginalPassword(Subscriber $game)
     {
         // هذه مجرد وظيفة وهمية للتوضيح
         // في الإنتاج الفعلي، يجب عليك معالجة كلمات المرور بشكل آمن
@@ -145,7 +146,7 @@ class GameApiController extends Controller
         }
 
         // البحث عن الاشتراك بواسطة رمز التفعيل
-        $game = Game::where('activation_code', $request->activation_code)->first();
+        $game = Subscriber::where('activation_code', $request->activation_code)->first();
 
         if (!$game) {
             return response()->json([
@@ -186,7 +187,7 @@ class GameApiController extends Controller
         }
 
         // البحث عن الاشتراك بواسطة رمز التفعيل
-        $game = Game::where('activation_code', $request->activation_code)
+        $game = Subscriber::where('activation_code', $request->activation_code)
             ->with(['mainCategory:id,name_ar,name_en,image', 'subCategory:id,name_ar,name_en,duration'])
             ->first();
 

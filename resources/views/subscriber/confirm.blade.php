@@ -3,6 +3,7 @@
 @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/translation.js'])
 
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
         rel="stylesheet">
@@ -100,26 +101,11 @@
                             <h3 style="text-align: center;">
                                 {{ $lang == 'ar' ? 'اختر طريقة الدفع بـ PayPal' : 'Choose PayPal Payment Method' }}
                             </h3>
-
-                            <!-- PayPal Account Button -->
-                            {{-- <button type="button" class="payment-option-button" id="paypal-account-btn"
-                                onclick="selectPaymentOption('paypal-account', '{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'account']) }}')">
-                                <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg"
-                                    alt="PayPal Account" class="payment-icon">
-                                {{ $lang == 'ar' ? 'الدفع بحساب PayPal' : 'Pay with PayPal Account' }}
-                            </button> --}}
-
-                            <!-- Credit/Debit Card Button -->
-                            {{-- <button type="button" class="payment-option-button" id="paypal-card-btn"
-                                onclick="selectPaymentOption('paypal-card', '{{ route('payment.paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id, 'type' => 'card']) }}')">
-                                <img src="https://www.paypalobjects.com/webstatic/en_US/i/buttons/cc-badges-ppmcvdam.png"
-                                    alt="Credit Card" class="payment-icon" style="width: auto; max-height: 24px;">
-                                {{ $lang == 'ar' ? 'الدفع ببطاقة الائتمان/الخصم' : 'Pay with Credit/Debit Card' }}
-                            </button> --}}
-                            <div id="paypal-button-container" class="paypal-button-container"></div>
-                            <p id="result-message"></p>
-
-
+{{-- PayPal Payment Button --}}
+<input type="hidden" id="price" value="{{ $price }}">
+<input type="hidden" id="paypal-form-action" value="{{ route('payment.process-paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}">
+<div id="paypal-button-container" class="paypal-button-container"></div>
+<p id="result-message"></p>
 
                             <!-- Phone Payment Button (Mobile only) -->
                             <button type="button" class="payment-option-button" id="paypal-phone-btn"
@@ -193,119 +179,69 @@
         </a>
     </div>
 
-    <script>
-document.addEventListener('DOMContentLoaded', function() {
-    showPayPalOptions();
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        showPayPalOptions();
 
-    paypal.Buttons({
-        createOrder: function(data, actions) {
-            return actions.order.create({
-                purchase_units: [{
-                    amount: {
-                        value: '{{ $price }}',
-                        currency_code: 'USD'
-                    },
-                    description: 'Subscription for {{ $subscriber->mainCategory->name_en }}'
-                }],
-                application_context: {
-                    shipping_preference: 'NO_SHIPPING'
-                }
-            });
-        },
-        onApprove: function(data, actions) {
-            return actions.order.capture().then(function(orderData) {
-                fetch('{{ route('payment.process-paypal', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        orderID: orderData.id,
-                        payerID: orderData.payer.payer_id
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = '{{ route('payment.success', ['lang' => $lang, 'subscriber_id' => $subscriber->id]) }}' + '?payment_id=' + orderData.id;
-                    } else {
-                        document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ أثناء معالجة الدفع، حاول مرة أخرى.' : 'An error occurred while processing the payment, please try again.' }}';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ، حاول مرة أخرى.' : 'An error occurred, please try again.' }}';
-                });
-            });
-        },
-        onError: function(err) {
-            console.error('PayPal Error:', err);
-            document.getElementById('result-message').innerText = '{{ $lang == 'ar' ? 'حدث خطأ في عملية الدفع.' : 'An error occurred during payment.' }}';
+        function showPayPalOptions() {
+            selectedPaymentMethod = 'paypal';
+            document.getElementById('paypal-options-container').style.display = 'block';
+            document.getElementById('fawry-instructions').style.display = 'none';
+            document.getElementById('transfer_image').removeAttribute('required');
+            resetOptionButtons();
+            if (selectedPaymentOption) {
+                document.getElementById(selectedPaymentOption + '-btn').classList.add('selected');
+            }
         }
-    }).render('#paypal-button-container');
 
-    function showPayPalOptions() {
-        selectedPaymentMethod = 'paypal';
-        document.getElementById('paypal-options-container').style.display = 'block';
-        document.getElementById('fawry-instructions').style.display = 'none';
-        document.getElementById('transfer_image').removeAttribute('required');
-        resetOptionButtons();
-        if (selectedPaymentOption) {
-            document.getElementById(selectedPaymentOption + '-btn').classList.add('selected');
+        function showFawryOptions() {
+            selectedPaymentMethod = 'fawry';
+            document.getElementById('paypal-options-container').style.display = 'none';
+            document.getElementById('fawry-instructions').style.display = 'block';
+            document.getElementById('submit-button').style.display = 'none';
+            document.getElementById('transfer_image').setAttribute('required', '');
+            selectedPaymentOption = null;
+            resetOptionButtons();
         }
-    }
 
-    function showFawryOptions() {
-        selectedPaymentMethod = 'fawry';
-        document.getElementById('paypal-options-container').style.display = 'none';
-        document.getElementById('fawry-instructions').style.display = 'block';
-        document.getElementById('submit-button').style.display = 'none';
-        document.getElementById('transfer_image').setAttribute('required', '');
-        selectedPaymentOption = null;
-        resetOptionButtons();
-    }
-
-    function resetOptionButtons() {
-        const optionButtons = document.querySelectorAll('.payment-option-button');
-        optionButtons.forEach(button => button.classList.remove('selected'));
-    }
-
-    function selectPaymentOption(option, formAction) {
-        console.log('Selected Option:', option, 'Form Action:', formAction);
-        selectedPaymentOption = option;
-        selectedFormAction = formAction;
-        resetOptionButtons();
-        document.getElementById(option + '-btn').classList.add('selected');
-        updatePaymentTypeField(option);
-        document.getElementById('submit-button').style.display = 'none';
-        document.getElementById('paypal-form').style.display = 'none';
-        document.getElementById('card-form').style.display = 'none';
-        if (option === 'paypal-account') {
-            document.getElementById('paypal-form').style.display = 'block';
-            document.getElementById('paypal-form').action = formAction;
-        } else if (option === 'paypal-card') {
-            document.getElementById('card-form').style.display = 'block';
-            document.getElementById('payment-form').action = formAction;
-        } else {
-            document.getElementById('submit-button').style.display = 'block';
+        function resetOptionButtons() {
+            const optionButtons = document.querySelectorAll('.payment-option-button');
+            optionButtons.forEach(button => button.classList.remove('selected'));
         }
-    }
 
-    function updatePaymentTypeField(option) {
-        let paymentTypeInput = document.querySelector('input[name="payment_type"]');
-        if (!paymentTypeInput) {
-            paymentTypeInput = document.createElement('input');
-            paymentTypeInput.type = 'hidden';
-            paymentTypeInput.name = 'payment_type';
-            document.getElementById('payment-form').appendChild(paymentTypeInput);
+        function selectPaymentOption(option, formAction) {
+            console.log('Selected Option:', option, 'Form Action:', formAction);
+            selectedPaymentOption = option;
+            selectedFormAction = formAction;
+            resetOptionButtons();
+            document.getElementById(option + '-btn').classList.add('selected');
+            updatePaymentTypeField(option);
+            document.getElementById('submit-button').style.display = 'none';
+            document.getElementById('paypal-form').style.display = 'none';
+            document.getElementById('card-form').style.display = 'none';
+            if (option === 'paypal-account') {
+                document.getElementById('paypal-form').style.display = 'block';
+                document.getElementById('paypal-form').action = formAction;
+            } else if (option === 'paypal-card') {
+                document.getElementById('card-form').style.display = 'block';
+                document.getElementById('payment-form').action = formAction;
+            } else {
+                document.getElementById('submit-button').style.display = 'block';
+            }
         }
-        paymentTypeInput.value = option;
-    }
-});
 
-
-    </script>
+        function updatePaymentTypeField(option) {
+            let paymentTypeInput = document.querySelector('input[name="payment_type"]');
+            if (!paymentTypeInput) {
+                paymentTypeInput = document.createElement('input');
+                paymentTypeInput.type = 'hidden';
+                paymentTypeInput.name = 'payment_type';
+                document.getElementById('payment-form').appendChild(paymentTypeInput);
+            }
+            paymentTypeInput.value = option;
+        }
+    });
+</script>
     <script
         src="https://www.paypal.com/sdk/js?client-id=AQHf4W6pc8XEeFoa3AqCJp4zl6jqwaGtw867CiE5EWcatMvIRc9dNTifo9HDpFyo_F4DMyoCEPmXVgHy&buyer-country=US&currency=USD&components=buttons&enable-funding=venmo">
     </script>

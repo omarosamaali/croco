@@ -191,9 +191,9 @@
                 </table>
             </div>
 
-            <div style="margin-top: 1rem;">
+            {{-- <div style="margin-top: 1rem;">
                 {{ $games->links() }}
-            </div>
+            </div> --}}
         </div>
     </div>
 
